@@ -23,9 +23,12 @@ use std::path::PathBuf;
 //    error (e.g., bug) which caused lzip to panic.
 // */
 use clap::Parser;
+use error::LzipError;
 use list::list_files;
 use lzip::{ClOptions, PrettyPrint};
 
+mod decoder;
+mod error;
 mod list;
 mod lzip;
 mod lzip_index;
@@ -874,7 +877,7 @@ struct Args {
     files: Vec<String>,
 }
 // int main( const int argc, const char * const argv[] )
-fn try_main() -> i32 {
+fn try_main() -> Result<i32, LzipError> {
     //   /* Mapping from gzip/bzip2 style 0..9 compression levels to the
     //      corresponding LZMA compression parameters. */
     //   const Lzma_options option_mapping[] =
@@ -1011,7 +1014,8 @@ fn try_main() -> i32 {
     //   if( filenames.empty() ) filenames.push_back("-");
 
     if program_mode == Mode::List {
-        return list_files(&args.files, &cl_opts);
+        list_files(&args.files, &cl_opts)?;
+        return Ok(0);
     }
 
     //   if( program_mode == m_compress )
@@ -1139,7 +1143,7 @@ fn try_main() -> i32 {
     //     std::fprintf( stderr, "%s: warning: %d %s failed the test.\n",
     //                   program_name, failed_tests,
     //                   ( failed_tests == 1 ) ? "file" : "files" );
-    return retval;
+    return Ok(retval);
 }
 
 fn main() {

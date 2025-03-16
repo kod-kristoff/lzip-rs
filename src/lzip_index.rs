@@ -33,12 +33,20 @@
 //   void size( const long long s ) { size_ = s; }
 //   };
 
-use std::io;
+use std::{
+    io::{self, Read, Seek, SeekFrom},
+    ptr::hash,
+};
 
-use crate::lzip::ClOptions;
+use crate::{
+    decoder::readblock,
+    error::LzipError,
+    lzip::{ClOptions, LzipHeader, MIN_MEMBER_SIZE},
+};
 
-pub struct LzipIndex
-  {
+pub struct LzipIndex {}
+// class Lzip_index
+//   {
 //   struct Member
 //     {
 //     Block dblock, mblock;		// data block, member block
@@ -56,7 +64,7 @@ pub struct LzipIndex
 //   const long long insize;
 //   int retval_;
 //   unsigned dictionary_size_;	// largest dictionary size in the file
-}
+
 //   bool check_header( const Lzip_header & header );
 //   void set_errno_error( const char * const msg );
 //   void set_num_error( const char * const msg, unsigned long long num );
@@ -131,6 +139,16 @@ pub struct LzipIndex
 //     return readblock( fd, buf, size );
 //   return 0;
 //   }
+fn seek_read<R>(fd: &mut R, buf: &mut [u8], size: usize, pos: u64) -> io::Result<usize>
+where
+    R: Read + Seek,
+{
+    if fd.seek(SeekFrom::Start(pos))? == pos {
+        readblock(fd, buf, size)
+    } else {
+        Ok(0)
+    }
+}
 
 // } // end namespace
 
@@ -144,6 +162,9 @@ pub struct LzipIndex
 //     { error_ = bad_dict_msg; retval_ = 2; return false; }
 //   return true;
 //   }
+fn check_header(header: &LzipHeader) -> Result<(), LzipError> {
+    todo!()
+}
 
 // void Lzip_index::set_errno_error( const char * const msg )
 //   {
@@ -169,6 +190,24 @@ pub struct LzipIndex
 //     { error_ = marking_msg; retval_ = 2; return false; }
 //   return true;
 //   }
+fn read_header<R>(
+    fd: &mut R,
+    header: &mut LzipHeader,
+    pos: u64,
+    ignore_marking: bool,
+) -> Result<(), LzipError>
+where
+    R: Read + Seek,
+{
+    if seek_read(fd, &mut header.data, LzipHeader::SIZE, pos)? != LzipHeader::SIZE {
+        return Err(LzipError::ErrorReadingMemberHeader);
+    }
+    let mut byte = [0; 1];
+    if !ignore_marking && readblock(fd, &mut byte[..], 1)? == 1 && byte[0] != 0 {
+        return Err(LzipError::MarkingDataNotAllowed);
+    }
+    Ok(())
+}
 
 // // If successful, push last member and set pos to member header.
 // bool Lzip_index::skip_trailing_data( const int fd, unsigned long long & pos,
@@ -236,10 +275,27 @@ pub struct LzipIndex
 //     std::memcpy( buffer + rd_size, buffer, buffer_size - rd_size );
 //     }
 //   }
-
 impl LzipIndex {
-    pub fn from_reader(infd: &mut dyn io::BufRead, cl_opts: ClOptions) -> Result<(),()> {
-        let insize = reader.seek()
+    pub fn from_reader_with_opts<R>(mut infd: R, cl_opts: &ClOptions) -> Result<Self, LzipError>
+    where
+        R: Read + Seek,
+    {
+        let insize = infd.seek(SeekFrom::End(0))?;
+        let retval_ = 0;
+        let dictionary_size = 0;
+
+        if insize < MIN_MEMBER_SIZE {
+            return Err(LzipError::InputFileTooShort { size: insize });
+        }
+        if insize > i64::MAX as u64 {
+            return Err(LzipError::InputFileTooLong { size: insize });
+        }
+
+        let mut header = LzipHeader::default();
+        read_header(&mut infd, &mut header, 0, cl_opts.ignore_marking)?;
+        check_header(&header)?;
+
+        todo!()
     }
 }
 // Lzip_index::Lzip_index( const int infd, const Cl_options & cl_opts )

@@ -17,11 +17,12 @@
 // #define _FILE_OFFSET_BITS 64
 
 use std::{
-    fs, io,
-    path::{Path, PathBuf},
+    fs::File,
+    io::{self, BufRead, BufReader, Seek},
+    path::PathBuf,
 };
 
-use crate::lzip::ClOptions;
+use crate::{lzip::ClOptions, lzip_index::LzipIndex};
 // #include <cstdio>
 // #include <cstring>
 // #include <string>
@@ -53,15 +54,20 @@ use crate::lzip::ClOptions;
 // const STDIN_NAME: &Path = &Path::new(i"-");
 // int list_files( const std::vector< std::string > & filenames,
 //                 const Cl_options & cl_opts )
-pub fn list_files(filenames: &[String], cl_opts: &ClOptions) -> i32 {
+
+pub fn list_files(filenames: &[String], cl_opts: &ClOptions) -> Result<(), io::Error> {
     //   unsigned long long total_comp = 0, total_uncomp = 0;
     //   int files = 0, retval = 0;
     //   bool first_post = true;
+
+    //   bool stdin_used = false;
     let mut stdin_used = false;
 
     //   for( unsigned i = 0; i < filenames.size(); ++i )
+
     for filename in filenames {
         let from_stdin = filename == "-";
+        //     const bool from_stdin = ( filenames[i] == "-" );
         if from_stdin {
             if stdin_used {
                 continue;
@@ -69,20 +75,35 @@ pub fn list_files(filenames: &[String], cl_opts: &ClOptions) -> i32 {
                 stdin_used = true;
             }
         }
+        //     if( from_stdin ) { if( stdin_used ) continue; else stdin_used = true; }
         //     const char * const input_filename =
         //       from_stdin ? "(stdin)" : filenames[i].c_str();
         //     struct stat in_stats;				// not used
         //     const int infd = from_stdin ? STDIN_FILENO :
         //       open_instream( input_filename, &in_stats, false, true );
         //     if( infd < 0 ) { set_retval( retval, 1 ); continue; }
-        let reader: Box<dyn io::BufRead> = if from_stdin {
-            Box::new(io::stdin().lock())
-        } else {
-            Box::new(io::BufReader::new(fs::File::open(filename).unwrap()))
-        };
 
         //     const Lzip_index lzip_index( infd, cl_opts );
-        let lzip_index = LzipIndex::from_reader(reader, cl_opts).unwrap();
+        let lzip_index = {
+            let lock = std::io::stdin().lock();
+            let infd = if from_stdin {
+                #[cfg(any(target_family = "unix", target_family = "wasm"))]
+                unsafe {
+                    use std::os::unix::io::{AsRawFd, FromRawFd};
+                    std::fs::File::from_raw_fd(lock.as_raw_fd())
+                }
+
+                #[cfg(target_family = "windows")]
+                unsafe {
+                    use std::os::windows::io::{AsRawHandle, FromRawHandle};
+                    std::fs::File::from_raw_handle(lock.as_raw_handle())
+                }
+            } else {
+                std::fs::File::open(filename)?
+            };
+            let infd = BufReader::new(infd);
+            LzipIndex::from_reader_with_opts(infd, cl_opts)
+        };
         //     close( infd );
         //     if( lzip_index.retval() != 0 )
         //       {

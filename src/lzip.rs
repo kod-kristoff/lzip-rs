@@ -42,6 +42,7 @@
 //   max_dictionary_bits = 29,
 //   max_dictionary_size = 1 << max_dictionary_bits,
 //   min_member_size = 36,
+pub const MIN_MEMBER_SIZE: u64 = 36;
 //   literal_context_bits = 3,
 //   literal_pos_state_bits = 0,				// not used
 //   pos_state_bits = 2,
@@ -194,6 +195,14 @@ pub struct PrettyPrint
 //   }
 
 // const uint8_t lzip_magic[4] = { 0x4C, 0x5A, 0x49, 0x50 };	// "LZIP"
+const LZIP_MAGIC: [u8; 4] = [0x4C, 0x5A, 0x49, 0x50]; // "LZIP"
+
+#[derive(Debug, Default)]
+pub struct LzipHeader {
+    pub data: [u8; Self::SIZE], // 0-3 magic bytes
+                                //   4 version
+                                //   5 coded dictionary size
+}
 
 // struct Lzip_header
 //   {
@@ -250,7 +259,9 @@ pub struct PrettyPrint
 //     { return check_magic() && check_version() &&
 //              isvalid_ds( dictionary_size() ); }
 //   };
-
+impl LzipHeader {
+    pub const SIZE: usize = 6;
+}
 // struct Lzip_trailer
 //   {
 //   enum { size = 20 };
@@ -304,10 +315,10 @@ pub struct PrettyPrint
 //   };
 /// command-line options
 pub struct ClOptions {
-    ignore_empty: bool,
-    ignore_marking: bool,
-    ignore_trailing: bool,
-    loose_trailing: bool,
+    pub ignore_empty: bool,
+    pub ignore_marking: bool,
+    pub ignore_trailing: bool,
+    pub loose_trailing: bool,
 }
 impl Default for ClOptions {
     fn default() -> Self {
