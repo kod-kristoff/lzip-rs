@@ -1,0 +1,17 @@
+[workspace]
+resolver = "3"
+members = ["lzip", "lzip-cli"]
+
+[workspace.package]
+name = "lzip"
+version = "0.1.0"
+edition = "2024"
+authors = ["Kristoffer Andersson <kod.kristoff@gmail.com>"]
+
+
+[workspace.dependencies]
+# local crates
+lzip = { path = "lzip" }
+
+# external crates
+clap = { version = "4.5.32" }
