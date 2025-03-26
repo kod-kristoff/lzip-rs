@@ -1,6 +1,6 @@
 use std::io::{self};
 
-use lzip_index::LzipIndex;
+pub use lzip_index::{LzipIndex, LzipIndexOptions};
 
 use crate::errors::LzipError;
 
@@ -10,7 +10,10 @@ mod lzip_header;
 mod lzip_index;
 mod lzip_trailer;
 
-pub fn list_files<R: io::BufRead + io::Seek>(input: &mut R) -> Result<(), LzipError> {
-    let index = LzipIndex::from_reader(input)?;
+pub fn list_files<R: io::BufRead + io::Seek>(
+    input: &mut R,
+    opts: &LzipIndexOptions,
+) -> Result<(), LzipError> {
+    let index = LzipIndex::from_reader(input, opts)?;
     todo!()
 }

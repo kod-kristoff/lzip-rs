@@ -6,6 +6,7 @@ pub enum LzipError {
     Header { pos: u64, error: LzipHeaderError },
     InputNotSeekable(io::Error),
     Trailer { pos: u64, error: LzipTrailerError },
+    EmptyMemberNotAllowed,
 }
 
 #[derive(Debug)]
@@ -15,6 +16,7 @@ pub enum LzipHeaderError {
     UnsupportedVersion(u8),
     TooSmallEncodedDictionarySize(u8),
     TooLargeEncodedDictionarySize(u8),
+    InvalidMarkingData,
 }
 
 #[derive(Debug)]

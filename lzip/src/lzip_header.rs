@@ -1,5 +1,7 @@
 use std::io;
 
+use byteorder::ReadBytesExt;
+
 use crate::errors::LzipHeaderError;
 
 pub struct LzipHeader {
@@ -9,7 +11,7 @@ pub struct LzipHeader {
 
 impl LzipHeader {
     const LZIP_MAGIC: [u8; 4] = [0x4C, 0x5A, 0x49, 0x50]; // "LZIP"
-    pub fn from_reader<R>(input: &mut R) -> Result<Self, LzipHeaderError>
+    pub fn from_reader<R>(input: &mut R, ignore_marking: bool) -> Result<Self, LzipHeaderError>
     where
         R: io::BufRead,
     {
@@ -17,7 +19,12 @@ impl LzipHeader {
         input
             .read_exact(&mut buffer)
             .map_err(LzipHeaderError::HeaderTooShort)?;
-
+        if !ignore_marking {
+            let byte = input.read_u8().map_err(LzipHeaderError::HeaderTooShort)?;
+            if byte != 0 {
+                return Err(LzipHeaderError::InvalidMarkingData);
+            }
+        }
         if buffer[0..4] != Self::LZIP_MAGIC {
             return Err(LzipHeaderError::BadFormat);
         }

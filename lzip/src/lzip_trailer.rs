@@ -26,9 +26,9 @@ impl LzipTrailer {
             .read_exact(&mut buffer)
             .map_err(LzipTrailerError::ErrorReading)?;
 
-        let data_crc = LittleEndian::read_u32(&buffer[0..3]);
-        let data_size = LittleEndian::read_u64(&buffer[4..11]);
-        let member_size = LittleEndian::read_u64(&buffer[12..19]);
+        let data_crc = LittleEndian::read_u32(&buffer[0..4]);
+        let data_size = LittleEndian::read_u64(&buffer[4..12]);
+        let member_size = LittleEndian::read_u64(&buffer[12..20]);
         if (data_crc == 0) != (data_size == 0) {
             return Err(LzipTrailerError::CrcAndDataSizeMismatch {
                 crc: data_crc,
@@ -61,5 +61,9 @@ impl LzipTrailer {
 
     pub fn member_size(&self) -> u64 {
         self.member_size
+    }
+
+    pub fn data_size(&self) -> u64 {
+        self.data_size
     }
 }
