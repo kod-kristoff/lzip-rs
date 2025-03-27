@@ -39,6 +39,10 @@ impl LzipHeader {
             dictionary_size,
         })
     }
+
+    pub fn dictionary_size(&self) -> u32 {
+        self.dictionary_size
+    }
 }
 
 const MIN_DICTIONARY_BITS: u32 = 12;

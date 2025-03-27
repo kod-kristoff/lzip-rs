@@ -7,6 +7,7 @@ pub enum LzipError {
     InputNotSeekable(io::Error),
     Trailer { pos: u64, error: LzipTrailerError },
     EmptyMemberNotAllowed,
+    DataTooLong,
 }
 
 #[derive(Debug)]

@@ -5,7 +5,11 @@ use crate::{
     lzip_trailer::LzipTrailer,
 };
 
-pub struct LzipIndex {}
+pub struct LzipIndex {
+    members: Vec<Member>,
+    /// largest dictionary size in the file
+    dictionary_size: u32,
+}
 
 #[derive(Debug, Copy, Clone)]
 /// command-line options
@@ -27,42 +31,43 @@ impl Default for LzipIndexOptions {
     }
 }
 
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug, Copy, Clone)]
 struct Member {
     dblock: Block,
     mblock: Block,
-    dictionary_size: usize,
+    dictionary_size: u32,
 }
 
 impl Member {
-    fn new(dpos: i64, dsize: i64, mpos: i64, msize: i64, dictionary_size) -> Self {
+    fn new(dpos: u64, dsize: u64, mpos: u64, msize: u64, dictionary_size: u32) -> Self {
         Self {
             dblock: Block::new(dpos, dsize),
             mblock: Block::new(mpos, msize),
-    dictionary_size,
+            dictionary_size,
         }
     }
 }
 
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug, Copy, Clone)]
 struct Block {
-    pos: i64,
-    size: i64
+    pos: u64,
+    size: u64,
 }
 impl Block {
-    fn new(pos: i64, size: i64) -> Self {
-        Self {
-            pos,
-            size,
-        }
+    fn new(pos: u64, size: u64) -> Self {
+        debug_assert!(pos + size <= i64::MAX as u64);
+        Self { pos, size }
+    }
+
+    fn end(&self) -> u64 {
+        self.pos + self.size
+    }
+
+    fn set_pos(&mut self, pos: u64) {
+        self.pos = pos;
     }
 }
 
-#[derive(Debug,Copy,Clone)]
-struct Block {
-    pos: i64,
-    size: i64
-}
 impl LzipIndex {
     pub fn from_reader<R>(input: &mut R, opts: &LzipIndexOptions) -> Result<Self, LzipError>
     where
@@ -105,7 +110,7 @@ impl LzipIndex {
                 Ok(header) => header,
                 Err(error) => {
                     if members.is_empty() {
-                        if skip_trailing_data(input, pos, opts) {
+                        if skip_trailing_data(input, pos, opts)? {
                             continue;
                         }
                         todo!();
@@ -122,12 +127,35 @@ impl LzipIndex {
             // good member
             pos -= trailer.member_size();
             if max_dictionary_size < header.dictionary_size() {
-            max_dictionary_size = dictionary_size;}
-            members.push(Member::new(0, trailer.data_size(), pos, trailer.member_size(), header.dictionary_size()));
+                max_dictionary_size = header.dictionary_size();
+            }
+            members.push(Member::new(
+                0,
+                trailer.data_size(),
+                pos,
+                trailer.member_size(),
+                header.dictionary_size(),
+            ));
         }
         if pos != 0 || members.is_empty() {
             todo!("Csn't creste LzipIndex from file");
-        todo!()
+        }
+        members.reverse();
+        let mut i = 0;
+        loop {
+            let end = members[i].dblock.end();
+            if end > i64::MAX as u64 {
+                return Err(LzipError::DataTooLong);
+            }
+            if i + 1 >= members.len() {
+                break;
+            }
+            members[i + 1].dblock.set_pos(end);
+        }
+        Ok(Self {
+            members,
+            dictionary_size: max_dictionary_size,
+        })
     }
 }
 
