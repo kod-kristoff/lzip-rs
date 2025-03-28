@@ -15,5 +15,7 @@ pub fn list_files<R: io::BufRead + io::Seek>(
     opts: &LzipIndexOptions,
 ) -> Result<(), LzipError> {
     let index = LzipIndex::from_reader(input, opts)?;
+    let udata_size = index.udata_size();
+    let cdata_size = index.cdata_size();
     todo!()
 }

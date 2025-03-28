@@ -157,6 +157,16 @@ impl LzipIndex {
             dictionary_size: max_dictionary_size,
         })
     }
+
+    /// Size of uncompressed data
+    pub fn udata_size(&self) -> u64 {
+        self.members.last().map(|m| m.dblock.end()).unwrap_or(0)
+    }
+
+    /// Size of compressed data
+    pub fn cdata_size(&self) -> u64 {
+        self.members.last().map(|m| m.mblock.end()).unwrap_or(0)
+    }
 }
 
 fn skip_trailing_data<R>(
