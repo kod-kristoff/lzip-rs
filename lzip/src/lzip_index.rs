@@ -9,6 +9,7 @@ pub struct LzipIndex {
     members: Vec<Member>,
     /// largest dictionary size in the file
     dictionary_size: u32,
+    insize: u64,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -49,7 +50,7 @@ impl Member {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct Block {
+pub struct Block {
     pos: u64,
     size: u64,
 }
@@ -63,6 +64,12 @@ impl Block {
         self.pos + self.size
     }
 
+    pub fn pos(&self) -> u64 {
+        self.pos
+    }
+    pub fn size(&self) -> u64 {
+        self.size
+    }
     fn set_pos(&mut self, pos: u64) {
         self.pos = pos;
     }
@@ -155,6 +162,7 @@ impl LzipIndex {
         Ok(Self {
             members,
             dictionary_size: max_dictionary_size,
+            insize,
         })
     }
 
@@ -166,6 +174,26 @@ impl LzipIndex {
     /// Size of compressed data
     pub fn cdata_size(&self) -> u64 {
         self.members.last().map(|m| m.mblock.end()).unwrap_or(0)
+    }
+
+    pub fn dictionary_size(&self) -> u32 {
+        self.dictionary_size
+    }
+
+    pub fn num_members(&self) -> usize {
+        self.members.len()
+    }
+
+    /// total size including trailing data (if any)
+    pub fn file_size(&self) -> u64 {
+        self.insize
+    }
+
+    pub fn dblock(&self, i: usize) -> &Block {
+        &self.members[i].dblock
+    }
+    pub fn mblock(&self, i: usize) -> &Block {
+        &self.members[i].mblock
     }
 }
 

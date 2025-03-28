@@ -1,6 +1,9 @@
 use std::error::Error;
 
 use clap::Parser;
+use lzip::{LzipIndexOptions, list_files};
+
+use crate::options::Args;
 
 struct LzmaOptions {
     dictionary_size: i32, // 4 KiB .. 512 MiB
@@ -17,22 +20,27 @@ enum Mode {
 
 mod options;
 
-fn try_main() -> Box<dyn Error> {
+fn try_main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    if args.list {
-        program_mode = Mode::List;
+    let program_mode = if args.list {
+        Mode::List
     } else if args.test {
-        program_mode = Mode::Test;
-    }
+        Mode::Test
+    } else {
+        unreachable!()
+    };
+    let opts = LzipIndexOptions::default();
+    let verbosity = args.verbose;
     if program_mode == Mode::List {
-        list_files(&args.files, &cl_opts)?;
+        list_files(&args.files, verbosity, &opts)?;
         return Ok(());
     }
+    Ok(())
 }
 
 fn main() {
     if let Err(err) = try_main() {
         eprintln!("Error: {:?}", err);
-        sys::exit(1);
+        std::process::exit(1);
     }
 }

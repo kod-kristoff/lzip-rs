@@ -1,14 +1,16 @@
-
 #[derive(Debug, clap::Parser)]
-struct Args {
+pub struct Args {
     /// print (un)compressed file sizes
     #[clap(short, long)]
-    list: bool,
+    pub list: bool,
     /// test compressed file integrity
     #[clap(short = 't', long)]
-    test: bool,
-    //
+    pub test: bool,
+    /// compression level 0
     #[clap(short = '0', long = "fast")]
-    zero: bool,
-    files: Vec<String>,
+    pub zero: bool,
+    /// be verbose (more -v gives more)
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub verbose: u8,
+    pub files: Vec<String>,
 }
