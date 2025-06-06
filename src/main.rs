@@ -1147,7 +1147,12 @@ fn try_main() -> Result<i32, LzipError> {
 }
 
 fn main() {
-    if try_main() > 0 {
-        todo!()
+    match try_main() {
+        Ok(0) => (),
+        Ok(ret) => std::process::exit(ret),
+        Err(err) => {
+            eprintln!("Error: {err:?}");
+            std::process::exit(1);
+        }
     }
 }

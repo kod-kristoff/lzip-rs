@@ -163,6 +163,9 @@ where
 //   return true;
 //   }
 fn check_header(header: &LzipHeader) -> Result<(), LzipError> {
+    if !header.check_header() {
+        return Err(Lzip);
+    }
     todo!()
 }
 
